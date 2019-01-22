@@ -113,3 +113,26 @@ where
 
     Ok(())
 }
+
+/// Wait signal handler for Ctrl-C.
+pub fn block_ctrl_c() -> Result<(), Error> {
+    if INIT.load(Ordering::SeqCst) {
+        return Err(Error::MultipleHandlers);
+    }
+    use std::sync::Once;
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| unsafe {
+        match platform::init_os_handler() {
+            Ok(_) => {}
+            Err(err) => {
+                eprintln!("{:?}", err);
+            }
+        }
+    });
+
+    unsafe {
+        platform::block_ctrl_c().expect("Critical system error while waiting for Ctrl-C");
+    }
+
+    Ok(())
+}
